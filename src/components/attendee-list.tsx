@@ -4,7 +4,7 @@ import { Table } from "./Table/table";
 import { TableHeader } from "./Table/table-header";
 import { TableCell } from "./Table/table-cell";
 import { TableRow } from "./Table/table-row";
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useState } from "react";
 import dayjs from 'dayjs';
 import ptBR from 'dayjs/locale/pt-br';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -12,16 +12,9 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 dayjs.extend(relativeTime);
 dayjs.locale(ptBR);
 
-interface Attendee {
-    id: string
-    name: string
-    email: string
-    createdAt: string
-    checkedInAt: string | null
-}
+import { attendees } from "../data/attendees";
 
 export function AttendeeList() {
-    const [ attendees, setAttendees ] = useState<Attendee[]>([]);
     const [ search, setSearch ] = useState(() => {
         const url = new URL(window.location.toString());
 
@@ -40,30 +33,17 @@ export function AttendeeList() {
         return 1
     });
 
-    const [ total, setTotal ] = useState<number>(0);
-
-    const totalPages = Math.ceil(total / 10);
     
-    useEffect(() => {
-        const url = new URL('http://localhost:3333/events/9e9bd979-9d10-4915-b339-3786b1634f33/attendees')
+    const filteredAttendee = attendees.filter(attendee => attendee.name
+        .toLocaleLowerCase()
+        .includes(search.toLocaleLowerCase()))
         
-        url.searchParams.set('pageIndex', String(page - 1))
-
-        if (!!search)
-            url.searchParams.set('query', search)
-
-        fetch(url)
-        .then(resp => resp.json())
-        .then(data => {
-            setAttendees(data.attendees);
-            setTotal(data.total);
-        })
-    }, [page, search])
+    const totalPages = Math.ceil(filteredAttendee.length / 10);
 
     function setCurrentSearch(search: string) {
         const url = new URL(window.location.toString());
         
-        url.searchParams.set('search', String(search ));
+        url.searchParams.set('search', search);
         window.history.pushState({}, "", url);
         setSearch(search);
     }
@@ -80,7 +60,7 @@ export function AttendeeList() {
         const { value } = e.target;
 
         setCurrentPage(1);
-        setCurrentSearch(value);
+        setCurrentSearch(value)
     }
 
     function handleGoToFirstPage() {
@@ -134,7 +114,7 @@ export function AttendeeList() {
                 </thead>
 
                 <tbody>
-                    {attendees.map(attendee => 
+                    {filteredAttendee.slice((page - 1) * 10, page * 10).map(attendee => 
                     <TableRow key={attendee.id}>
                         <TableCell>
                             <input className="size-4 bg-black/20 rounded border-white/10 " type="checkbox" />
@@ -163,7 +143,7 @@ export function AttendeeList() {
                 <tfoot>
                     <tr>
                         <TableCell colSpan={3}>
-                            Mostrando { attendees.length } de { total } itens
+                            Mostrando { filteredAttendee.length < 10 ? filteredAttendee.length : page * 10 } de { filteredAttendee.length } itens
                         </TableCell>
                         <TableCell className="text-right" colSpan={3}>
                             <div className="inline-flex items-center gap-8">
